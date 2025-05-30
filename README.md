@@ -5,8 +5,9 @@ Have a venv in .venv with the requirements.txt inside of it
 ## Systemd bixi service 
 Edit bixi.service where it says EDIT_HERE
 
-Put bixi.service here : 
-/etc/systemd/system/bixi.service
+Put bixi.service here : /etc/systemd/system/bixi.service
+
+cp ./bixi.service /etc/systemd/system/bixi.service
 
 sudo systemctl daemon-reload
 sudo systemctl enable bixi.service
@@ -21,3 +22,6 @@ then add to crontab :
 crontab -e
 
 0 3 * * * /home/yourname/projects/bixi/update_if_needed.sh >> /home/yourname/projects/bixi/update.log 2>&1
+
+## See the logs : 
+sudo journalctl -u bixi.service -n 20

@@ -53,15 +53,15 @@ def compute_ceiled_means(aggregate_holder, nb_updates,start_time):
     return results
 
 
-def process_bixi_until_death():
+def process_bixi_until_death(station_status_url):
     station_status = fetch_json(station_status_url)
+    print("Starting the bixi fetching")
     while(True):
         agregate_holder = defaultdict(lambda: defaultdict(int))
         nb_updates = 0
         start_time = floor_to_previous_15min(station_status["last_updated"])
         max_time = start_time + 15 * 60 # 15mn
-        #max_time = station_status["last_updated"] + 60 # 15mn
-        add_to_agg(agregate_holder,nb_updates,station_status)
+        add_to_agg(agregate_holder,station_status)
         nb_updates+=1
         towait = (station_status["last_updated"] + (station_status["ttl"])) - datetime.now().timestamp()
         if(towait < 0):
@@ -73,11 +73,10 @@ def process_bixi_until_death():
             u_station_status = fetch_json(station_status_url)
             if u_station_status["last_updated"] > max_time:
                 station_status = u_station_status
-                print("Finishing the 15mn")
                 break
             if u_station_status["last_updated"] != prev_timestamp :
-                print(".",end="")
-                add_to_agg(agregate_holder,nb_updates,station_status) 
+                print(".",end="",flush=True)
+                add_to_agg(agregate_holder,station_status) 
                 nb_updates+=1
                 prev_timestamp = u_station_status["last_updated"] 
             towait = (u_station_status["last_updated"] + (u_station_status["ttl"])) - datetime.now().timestamp()
@@ -85,9 +84,12 @@ def process_bixi_until_death():
             if(towait < 0):
                 towait = 0
             time.sleep(towait)
+        print(f" Sending {nb_updates} to DB")
         to_send = compute_ceiled_means(agregate_holder,nb_updates,start_time)
         db_bixi_dispo.insert_ceiled_means(to_send)
 
 
 
-station_status_url = retreive_urls()
+if __name__ == "__main__":
+    station_status_url = retreive_urls()
+    process_bixi_until_death(station_status_url)

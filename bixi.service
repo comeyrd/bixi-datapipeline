@@ -1,0 +1,13 @@
+[Unit]
+Description=Bixi Data Collector
+After=network.target
+
+[Service]
+User=EDIT_HERE_UNIX_USERNAME
+WorkingDirectory=EDIT_HERE_WORKING_DIRECTORY
+ExecStart=EDIT_HERE_WORKING_DIRECTORY/.venv/bin/python EDIT_HERE_WORKING_DIRECTORY/bixi_processing.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

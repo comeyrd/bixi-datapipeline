@@ -8,6 +8,7 @@ FIELDS = ['num_bikes_available','num_ebikes_available','num_bikes_disabled','num
 MINIMUM_WAIT = 2 #s
 BASE_URL = "https://gbfs.velobixi.com/gbfs/gbfs.json"
 STATION_STATUS = "station_status"
+FIFTEEN_MINUTES = 15 * 60
 
 def retreive_urls():
     urls = fetch_json(BASE_URL)
@@ -27,7 +28,7 @@ def fetch_json(url):
         print(f"Error fetching JSON from {url}: {e}")
         return {}
 def floor_to_previous_15min(posix_timestamp):
-    interval = 15 * 60  # 15mn
+    interval = FIFTEEN_MINUTES 
     floored_timestamp = (posix_timestamp // interval) * interval
     return floored_timestamp
 
@@ -60,14 +61,10 @@ def process_bixi_until_death(station_status_url):
         agregate_holder = defaultdict(lambda: defaultdict(int))
         nb_updates = 0
         start_time = floor_to_previous_15min(station_status["last_updated"])
-        max_time = start_time + 15 * 60 # 15mn
+        max_time = start_time + FIFTEEN_MINUTES
         add_to_agg(agregate_holder,station_status)
         nb_updates+=1
-        towait = (station_status["last_updated"] + (station_status["ttl"])) - datetime.now().timestamp()
-        if(towait < 0):
-            towait = 0
-        towait +=MINIMUM_WAIT
-        time.sleep(towait)
+        time.sleep(station_status["ttl"])
         prev_timestamp = station_status["last_updated"]
         while True:
             u_station_status = fetch_json(station_status_url)
@@ -79,11 +76,9 @@ def process_bixi_until_death(station_status_url):
                 add_to_agg(agregate_holder,station_status) 
                 nb_updates+=1
                 prev_timestamp = u_station_status["last_updated"] 
-            towait = (u_station_status["last_updated"] + (u_station_status["ttl"])) - datetime.now().timestamp()
-            towait += MINIMUM_WAIT
-            if(towait < 0):
-                towait = 0
-            time.sleep(towait)
+            else : 
+                print("-",end="",flush=True)
+            time.sleep(u_station_status["ttl"])
         print(f" Sending {nb_updates} to DB")
         to_send = compute_ceiled_means(agregate_holder,nb_updates,start_time)
         db_bixi_dispo.insert_ceiled_means(to_send)
